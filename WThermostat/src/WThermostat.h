@@ -59,6 +59,8 @@ public :
     this->byteTemperatureActual = NOT_SUPPORTED;
     this->byteTemperatureTarget = NOT_SUPPORTED;
     this->byteTemperatureFloor = NOT_SUPPORTED;
+    this->byteMaxTemperatureHeater = NOT_SUPPORTED;
+    this->byteMinTemperatureHeater = NOT_SUPPORTED;
     this->temperatureFactor = 2.0f;
     this->byteSchedulesMode = NOT_SUPPORTED;
     this->byteLocked = NOT_SUPPORTED;
@@ -73,6 +75,8 @@ public :
               ((this->byteTemperatureActual == NOT_SUPPORTED) || (!this->actualTemperature->isNull())) &&
               ((this->byteTemperatureTarget == NOT_SUPPORTED) || (this->targetTemperatureManualMode != 0.0)) &&
               ((this->byteTemperatureFloor == NOT_SUPPORTED)  || (!this->actualFloorTemperature->isNull())) &&
+              ((this->byteMaxTemperatureHeater == NOT_SUPPORTED) || (!this->maxTemperatureHeater->isNull())) &&
+              ((this->byteMinTemperatureHeater == NOT_SUPPORTED) || (!this->minTemperatureHeater->isNull())) &&
               ((this->byteSchedulesMode == NOT_SUPPORTED)     || (!this->schedulesMode->isNull()))
              );
   }
@@ -81,16 +85,30 @@ public :
     //schedulesDayOffset
     this->schedulesDayOffset = network->getSettings()->setByte("schedulesDayOffset", 0);
     //standard properties
-    this->actualTemperature = WProperty::createTemperatureProperty("temperature", "Actual");
+    this->actualTemperature = WProperty::createTemperatureProperty("Temperature", "Actual");
     this->actualTemperature->setReadOnly(true);
     this->addProperty(actualTemperature);
-    this->targetTemperature = WProperty::createTargetTemperatureProperty("targetTemperature", "Target");
+    this->targetTemperature = WProperty::createTargetTemperatureProperty("TargetTemperature", "Target");
     this->targetTemperature->setMultipleOf(1.0f / this->temperatureFactor);
     this->targetTemperature->setOnChange(std::bind(&WThermostat::setTargetTemperature, this, std::placeholders::_1));
     this->targetTemperature->setOnValueRequest([this](WProperty* p) {updateTargetTemperature();});
     this->addProperty(targetTemperature);
+    if (byteMaxTemperatureHeater != NOT_SUPPORTED) {
+      this->maxTemperatureHeater = WProperty::createTemperatureProperty("MaxTemperatureHeater", "MaxTemperatureHeater");
+      this->maxTemperatureHeater->setReadOnly(true);
+      this->addProperty(maxTemperatureHeater);
+    } else {
+      this->maxTemperatureHeater = nullptr;
+    }
+    if (byteMinTemperatureHeater != NOT_SUPPORTED) {
+      this->minTemperatureHeater = WProperty::createTemperatureProperty("MinTemperatureHeater", "MinTemperatureHeater");
+      this->minTemperatureHeater->setReadOnly(true);
+      this->addProperty(minTemperatureHeater);
+    } else {
+      this->minTemperatureHeater = nullptr;
+    }
     if (byteTemperatureFloor != NOT_SUPPORTED) {
-			this->actualFloorTemperature = WProperty::createTargetTemperatureProperty("floorTemperature", "Floor");
+			this->actualFloorTemperature = WProperty::createTargetTemperatureProperty("FloorTemperature", "Floor");
     	this->actualFloorTemperature->setReadOnly(true);
     	this->actualFloorTemperature->setVisibility(MQTT);
     	this->addProperty(actualFloorTemperature);
@@ -331,6 +349,8 @@ protected :
   byte byteTemperatureActual;
   byte byteTemperatureTarget;
   byte byteTemperatureFloor;
+  byte byteMaxTemperatureHeater;
+  byte byteMinTemperatureHeater;
   byte byteSchedulesMode;
   byte byteLocked;
   byte byteSchedules;
@@ -344,6 +364,8 @@ protected :
   WProperty* actualTemperature;
   WProperty* targetTemperature;
   WProperty* actualFloorTemperature;
+  WProperty* maxTemperatureHeater;
+  WProperty* minTemperatureHeater;
   double targetTemperatureManualMode;
   WProperty* deviceOn;
   WProperty* schedulesMode;
@@ -475,6 +497,26 @@ protected :
         newValue = (float) rawValue / this->temperatureFactor;
         changed = ((changed) || (!actualFloorTemperature->equalsDouble(newValue)));
         actualFloorTemperature->setDouble(newValue);
+        knownCommand = true;
+      }
+    } else if ((byteMaxTemperatureHeater != NOT_SUPPORTED) && (cByte == byteMaxTemperatureHeater)) {
+      if (commandLength == 0x08) {
+        //actual Temperature
+        //e.g. 23C: 55 aa 01 07 00 08 13 02 00 04 00 00 00 2e
+        unsigned long rawValue = WSettings::getUnsignedLong(receivedCommand[10], receivedCommand[11], receivedCommand[12], receivedCommand[13]);
+        newValue = (float) rawValue / this->temperatureFactor;
+        changed = ((changed) || (!maxTemperatureHeater->equalsDouble(newValue)));
+        maxTemperatureHeater->setDouble(newValue);
+        knownCommand = true;
+      }
+    } else if ((byteMinTemperatureHeater != NOT_SUPPORTED) && (cByte == byteMinTemperatureHeater)) {
+      if (commandLength == 0x08) {
+        //actual Temperature
+        //e.g. 23C: 55 aa 01 07 00 08 13 02 00 04 00 00 00 2e
+        unsigned long rawValue = WSettings::getUnsignedLong(receivedCommand[10], receivedCommand[11], receivedCommand[12], receivedCommand[13]);
+        newValue = (float) rawValue / this->temperatureFactor;
+        changed = ((changed) || (!minTemperatureHeater->equalsDouble(newValue)));
+        minTemperatureHeater->setDouble(newValue);
         knownCommand = true;
       }
     } else if (cByte == byteSchedulesMode) {
@@ -740,12 +782,19 @@ protected :
   }
 
   void updateTargetTemperature() {
-    if ((this->currentSchedulePeriod != -1) && (schedulesMode->equalsString(SCHEDULES_MODE_AUTO))) {
-      double temp = (double) schedules[this->currentSchedulePeriod + 2] / this->temperatureFactor;
-      targetTemperature->setDouble(temp);
-    } else {
-      targetTemperature->setDouble(targetTemperatureManualMode);
-    }
+    // Make sure maual overwrite is always working even if the schedular is on AUTO
+    // this way you can temporary manually overwrite the scheduled temperature.
+    // The scheduled program will take over at the next scheduled time block.
+    // Away during schedular AUTO is now setting the temperature to the value set in "Leave"
+    // --- The scheduler does not overwrite Away mode ---
+    // Hold during schedular AUTO is now setting the temperature to the value set in "Maintain"
+    // --- The scheduler does not overwrite Hold mode it will continue after the Hold timer has counted down ---
+    // if ((this->currentSchedulePeriod != -1) && (schedulesMode->equalsString(SCHEDULES_MODE_AUTO))) {
+    //   double temp = (double) schedules[this->currentSchedulePeriod + 2] / this->temperatureFactor;
+    //   targetTemperature->setDouble(temp);
+    // } else {
+         targetTemperature->setDouble(targetTemperatureManualMode);
+    // }
   }
 
   bool receivedSchedules() {
