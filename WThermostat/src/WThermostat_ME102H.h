@@ -21,6 +21,8 @@ public :
     this->byteTemperatureActual = 0x18;
     this->byteTemperatureTarget = 0x10;
     this->byteTemperatureFloor = 0x65;
+    this->byteMaxTemperatureHeater = 0x13;
+    this->byteMinTemperatureHeater = 0x1A;
     this->temperatureFactor = 1.0f;
     this->byteSchedulesMode = 0x02;
     this->byteLocked = 0x28;
@@ -38,6 +40,8 @@ public :
     this->schedulesMode->clearEnums();
     this->schedulesMode->addEnumString(SCHEDULES_MODE_AUTO);
     this->schedulesMode->addEnumString(SCHEDULES_MODE_OFF);
+    this->schedulesMode->addEnumString(SCHEDULES_MODE_HOLIDAY);
+    this->schedulesMode->addEnumString(SCHEDULES_MODE_HOLD);
     //sensorSelection
     this->sensorSelection = new WProperty("sensorSelection", "Sensor Selection", STRING, TYPE_THERMOSTAT_MODE_PROPERTY);
     this->sensorSelection->addEnumString(SENSOR_SELECTION_INTERNAL);
