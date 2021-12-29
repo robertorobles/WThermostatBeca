@@ -63,6 +63,7 @@ public :
     this->byteMinTemperatureHeater = NOT_SUPPORTED;
     this->temperatureFactor = 2.0f;
     this->byteSchedulesMode = NOT_SUPPORTED;
+    this->byteHeater = NOT_SUPPORTED;
     this->byteLocked = NOT_SUPPORTED;
     this->byteSchedules = NOT_SUPPORTED;
     this->byteSchedulingPosHour = 1;
@@ -93,20 +94,6 @@ public :
     this->targetTemperature->setOnChange(std::bind(&WThermostat::setTargetTemperature, this, std::placeholders::_1));
     this->targetTemperature->setOnValueRequest([this](WProperty* p) {updateTargetTemperature();});
     this->addProperty(targetTemperature);
-    if (byteMaxTemperatureHeater != NOT_SUPPORTED) {
-      this->maxTemperatureHeater = WProperty::createTemperatureProperty("MaxTemperatureHeater", "MaxTemperatureHeater");
-      this->maxTemperatureHeater->setReadOnly(true);
-      this->addProperty(maxTemperatureHeater);
-    } else {
-      this->maxTemperatureHeater = nullptr;
-    }
-    if (byteMinTemperatureHeater != NOT_SUPPORTED) {
-      this->minTemperatureHeater = WProperty::createTemperatureProperty("MinTemperatureHeater", "MinTemperatureHeater");
-      this->minTemperatureHeater->setReadOnly(true);
-      this->addProperty(minTemperatureHeater);
-    } else {
-      this->minTemperatureHeater = nullptr;
-    }
     if (byteTemperatureFloor != NOT_SUPPORTED) {
 			this->actualFloorTemperature = WProperty::createTargetTemperatureProperty("FloorTemperature", "Floor");
     	this->actualFloorTemperature->setReadOnly(true);
@@ -130,6 +117,27 @@ public :
     this->locked->setOnChange(std::bind(&WThermostat::lockedToMcu, this, std::placeholders::_1));
     this->locked->setVisibility(MQTT);
     this->addProperty(locked);
+    if (byteHeater != NOT_SUPPORTED) {
+      this->heater = WProperty::createOnOffProperty("Heater", "on");
+      this->heater->setVisibility(MQTT);
+      this->addProperty(heater);
+    } else {
+      this->heater = nullptr;
+    }
+    if (byteMinTemperatureHeater != NOT_SUPPORTED) {
+      this->minTemperatureHeater = WProperty::createTemperatureProperty("MinTemperatureHeater", "MinTemperatureHeater");
+      this->minTemperatureHeater->setReadOnly(true);
+      this->addProperty(minTemperatureHeater);
+    } else {
+      this->minTemperatureHeater = nullptr;
+    }
+    if (byteMaxTemperatureHeater != NOT_SUPPORTED) {
+      this->maxTemperatureHeater = WProperty::createTemperatureProperty("MaxTemperatureHeater", "MaxTemperatureHeater");
+      this->maxTemperatureHeater->setReadOnly(true);
+      this->addProperty(maxTemperatureHeater);
+    } else {
+      this->maxTemperatureHeater = nullptr;
+    }
     this->completeDeviceState = network->getSettings()->setBoolean("sendCompleteDeviceState", true);
     //Heating Relay and State property
     this->state = nullptr;
@@ -352,6 +360,7 @@ protected :
   byte byteMaxTemperatureHeater;
   byte byteMinTemperatureHeater;
   byte byteSchedulesMode;
+  byte byteHeater;
   byte byteLocked;
   byte byteSchedules;
   byte byteSchedulingPosHour;
@@ -371,6 +380,7 @@ protected :
   WProperty* schedulesMode;
   WProperty *completeDeviceState;
   WProperty* switchBackToAuto;
+  WProperty* heater;
   WProperty* locked;
   WProperty* state;
   WProperty* supportingHeatingRelay;
@@ -449,6 +459,7 @@ protected :
     //Status report from MCU
     bool changed = false;
     bool newB;
+    bool newH;
     float newValue;
     const char* newS;
     bool knownCommand = false;
@@ -512,7 +523,7 @@ protected :
     } else if ((byteMinTemperatureHeater != NOT_SUPPORTED) && (cByte == byteMinTemperatureHeater)) {
       if (commandLength == 0x08) {
         //actual Temperature
-        //e.g. 23C: 55 aa 01 07 00 08 13 02 00 04 00 00 00 2e
+        //e.g. 23C: 55 aa 01 07 00 08 1A 02 00 04 00 00 00 2e
         unsigned long rawValue = WSettings::getUnsignedLong(receivedCommand[10], receivedCommand[11], receivedCommand[12], receivedCommand[13]);
         newValue = (float) rawValue / this->temperatureFactor;
         changed = ((changed) || (!minTemperatureHeater->equalsDouble(newValue)));
@@ -528,6 +539,14 @@ protected :
           if (changed) updateTargetTemperature();
           knownCommand = true;
         }
+      }
+    } else if ((byteHeater != NOT_SUPPORTED) && (cByte == byteHeater)) {
+      if (commandLength == 0x05) {
+        //Heater
+        newH = (receivedCommand[10] == 0x00);
+        changed = ((changed) || (newH != heater->getBoolean()));
+        heater->setBoolean(newH);
+        knownCommand = true;
       }
     } else if (cByte == byteLocked) {
       if (commandLength == 0x05) {

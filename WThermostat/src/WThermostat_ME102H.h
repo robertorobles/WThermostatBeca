@@ -25,6 +25,7 @@ public :
     this->byteMinTemperatureHeater = 0x1A;
     this->temperatureFactor = 1.0f;
     this->byteSchedulesMode = 0x02;
+    this->byteHeater = 0x24;
     this->byteLocked = 0x28;
     this->byteSchedules = 0x6c;
     this->byteSchedulingPosHour = 0;
