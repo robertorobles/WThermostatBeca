@@ -59,8 +59,8 @@ public :
     this->byteTemperatureActual = NOT_SUPPORTED;
     this->byteTemperatureTarget = NOT_SUPPORTED;
     this->byteTemperatureFloor = NOT_SUPPORTED;
-    this->byteMaxTemperatureHeater = NOT_SUPPORTED;
-    this->byteMinTemperatureHeater = NOT_SUPPORTED;
+    this->byteMaxHeaterTemperature = NOT_SUPPORTED;
+    this->byteMinHeaterTemperature = NOT_SUPPORTED;
     this->temperatureFactor = 2.0f;
     this->byteSchedulesMode = NOT_SUPPORTED;
     this->byteHeater = NOT_SUPPORTED;
@@ -76,8 +76,8 @@ public :
               ((this->byteTemperatureActual == NOT_SUPPORTED) || (!this->actualTemperature->isNull())) &&
               ((this->byteTemperatureTarget == NOT_SUPPORTED) || (this->targetTemperatureManualMode != 0.0)) &&
               ((this->byteTemperatureFloor == NOT_SUPPORTED)  || (!this->actualFloorTemperature->isNull())) &&
-              ((this->byteMaxTemperatureHeater == NOT_SUPPORTED) || (!this->maxTemperatureHeater->isNull())) &&
-              ((this->byteMinTemperatureHeater == NOT_SUPPORTED) || (!this->minTemperatureHeater->isNull())) &&
+              ((this->byteMaxHeaterTemperature == NOT_SUPPORTED) || (!this->maxHeaterTemperature->isNull())) &&
+              ((this->byteMinHeaterTemperature == NOT_SUPPORTED) || (!this->minHeaterTemperature->isNull())) &&
               ((this->byteSchedulesMode == NOT_SUPPORTED)     || (!this->schedulesMode->isNull()))
              );
   }
@@ -124,19 +124,19 @@ public :
     } else {
       this->heater = nullptr;
     }
-    if (byteMinTemperatureHeater != NOT_SUPPORTED) {
-      this->minTemperatureHeater = WProperty::createTemperatureProperty("MinTemperatureHeater", "MinTemperatureHeater");
-      this->minTemperatureHeater->setReadOnly(true);
-      this->addProperty(minTemperatureHeater);
+    if (byteMinHeaterTemperature != NOT_SUPPORTED) {
+      this->minHeaterTemperature = WProperty::createTemperatureProperty("MinHeaterTemperature", "MinHeaterTemperature");
+      this->minHeaterTemperature->setReadOnly(true);
+      this->addProperty(minHeaterTemperature);
     } else {
-      this->minTemperatureHeater = nullptr;
+      this->minHeaterTemperature = nullptr;
     }
-    if (byteMaxTemperatureHeater != NOT_SUPPORTED) {
-      this->maxTemperatureHeater = WProperty::createTemperatureProperty("MaxTemperatureHeater", "MaxTemperatureHeater");
-      this->maxTemperatureHeater->setReadOnly(true);
-      this->addProperty(maxTemperatureHeater);
+    if (byteMaxHeaterTemperature != NOT_SUPPORTED) {
+      this->maxHeaterTemperature = WProperty::createTemperatureProperty("MaxHeaterTemperature", "MaxHeaterTemperature");
+      this->maxHeaterTemperature->setReadOnly(true);
+      this->addProperty(maxHeaterTemperature);
     } else {
-      this->maxTemperatureHeater = nullptr;
+      this->maxHeaterTemperature = nullptr;
     }
     this->completeDeviceState = network->getSettings()->setBoolean("sendCompleteDeviceState", true);
     //Heating Relay and State property
@@ -357,8 +357,8 @@ protected :
   byte byteTemperatureActual;
   byte byteTemperatureTarget;
   byte byteTemperatureFloor;
-  byte byteMaxTemperatureHeater;
-  byte byteMinTemperatureHeater;
+  byte byteMaxHeaterTemperature;
+  byte byteMinHeaterTemperature;
   byte byteSchedulesMode;
   byte byteHeater;
   byte byteLocked;
@@ -373,8 +373,8 @@ protected :
   WProperty* actualTemperature;
   WProperty* targetTemperature;
   WProperty* actualFloorTemperature;
-  WProperty* maxTemperatureHeater;
-  WProperty* minTemperatureHeater;
+  WProperty* maxHeaterTemperature;
+  WProperty* minHeaterTemperature;
   double targetTemperatureManualMode;
   WProperty* deviceOn;
   WProperty* schedulesMode;
@@ -510,24 +510,24 @@ protected :
         actualFloorTemperature->setDouble(newValue);
         knownCommand = true;
       }
-    } else if ((byteMaxTemperatureHeater != NOT_SUPPORTED) && (cByte == byteMaxTemperatureHeater)) {
+    } else if ((byteMaxHeaterTemperature != NOT_SUPPORTED) && (cByte == byteMaxHeaterTemperature)) {
       if (commandLength == 0x08) {
         //actual Temperature
         //e.g. 23C: 55 aa 01 07 00 08 13 02 00 04 00 00 00 2e
         unsigned long rawValue = WSettings::getUnsignedLong(receivedCommand[10], receivedCommand[11], receivedCommand[12], receivedCommand[13]);
         newValue = (float) rawValue / this->temperatureFactor;
-        changed = ((changed) || (!maxTemperatureHeater->equalsDouble(newValue)));
-        maxTemperatureHeater->setDouble(newValue);
+        changed = ((changed) || (!maxHeaterTemperature->equalsDouble(newValue)));
+        maxHeaterTemperature->setDouble(newValue);
         knownCommand = true;
       }
-    } else if ((byteMinTemperatureHeater != NOT_SUPPORTED) && (cByte == byteMinTemperatureHeater)) {
+    } else if ((byteMinHeaterTemperature != NOT_SUPPORTED) && (cByte == byteMinHeaterTemperature)) {
       if (commandLength == 0x08) {
         //actual Temperature
         //e.g. 23C: 55 aa 01 07 00 08 1A 02 00 04 00 00 00 2e
         unsigned long rawValue = WSettings::getUnsignedLong(receivedCommand[10], receivedCommand[11], receivedCommand[12], receivedCommand[13]);
         newValue = (float) rawValue / this->temperatureFactor;
-        changed = ((changed) || (!minTemperatureHeater->equalsDouble(newValue)));
-        minTemperatureHeater->setDouble(newValue);
+        changed = ((changed) || (!minHeaterTemperature->equalsDouble(newValue)));
+        minHeaterTemperature->setDouble(newValue);
         knownCommand = true;
       }
     } else if (cByte == byteSchedulesMode) {

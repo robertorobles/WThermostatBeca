@@ -5,10 +5,10 @@
 #include <ESP8266WiFi.h>
 #include "WDevice.h"
 
-#define HEARTBEAT_INTERVAL 20000
-#define MINIMUM_INTERVAL 10000
+#define HEARTBEAT_INTERVAL 60000
+#define MINIMUM_INTERVAL 20000
 #define QUERY_INTERVAL 2000
-#define CMD_RESP_TIMEOUT 1500
+#define CMD_RESP_TIMEOUT 2000
 
 const unsigned char COMMAND_START[] = {0x55, 0xAA};
 
@@ -205,11 +205,12 @@ public :
           lastHeartBeat = now;
         }
         //Query
-        if (((now - lastHeartBeat) > MINIMUM_INTERVAL)
-            && ((lastQueryStatus == 0) || (now - lastQueryStatus > QUERY_INTERVAL))) {
-          queryDeviceState();
-          lastQueryStatus = now;
-        }
+ //Solve issue #239
+//        if (((now - lastHeartBeat) > MINIMUM_INTERVAL)
+//            && ((lastQueryStatus == 0) || (now - lastQueryStatus > QUERY_INTERVAL))) {
+//          queryDeviceState();
+//          lastQueryStatus = now;
+//        }
         break;
       }
     }

@@ -21,8 +21,8 @@ public :
     this->byteTemperatureActual = 0x18;
     this->byteTemperatureTarget = 0x10;
     this->byteTemperatureFloor = 0x65;
-    this->byteMaxTemperatureHeater = 0x13;
-    this->byteMinTemperatureHeater = 0x1A;
+    this->byteMaxHeaterTemperature = 0x13;
+    this->byteMinHeaterTemperature = 0x1A;
     this->temperatureFactor = 1.0f;
     this->byteSchedulesMode = 0x02;
     this->byteHeater = 0x24;
