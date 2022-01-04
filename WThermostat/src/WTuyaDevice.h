@@ -209,10 +209,9 @@ public :
           lastHeartBeat = now;
         }
         //Query
-         if (( (now - lastHeartBeat) > MINIMUM_INTERVAL)
-         //if (( (now - lastHeartBeat) < HEARTBEAT_INTERVAL) //Only query in between heartbeats
-            && (QueryMCU->getBoolean())
-            && ((lastQueryStatus == 0) || (now - lastQueryStatus > QUERY_INTERVAL))) {
+         if (( (now - lastHeartBeat) < HEARTBEAT_INTERVAL)                              //Only query in between heartbeats
+            && (QueryMCU->getBoolean())                                                 //Only query when QueryMCU is enabled
+            && ((lastQueryStatus == 0) || (now - lastQueryStatus > QUERY_INTERVAL))) {  //Query at first boot and every QUERY_INTERVAL afterwards if both 2 test are true
           queryDeviceState();
           lastQueryStatus = now;
         }
