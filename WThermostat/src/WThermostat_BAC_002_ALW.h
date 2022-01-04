@@ -18,6 +18,7 @@ public :
   WThermostat_BAC_002_ALW(WNetwork* network, WProperty* thermostatModel, WClock* wClock)
     : WThermostat(network, thermostatModel, wClock) {
     network->debug(F("WThermostat_BAC_002_ALW created"));
+    QueryMCU = true;  // Enable or Disable querying the MCU Disabling can sove issue #239
   }
 
   virtual void configureCommandBytes() {

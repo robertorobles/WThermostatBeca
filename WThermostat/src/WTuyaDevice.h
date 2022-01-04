@@ -5,10 +5,10 @@
 #include <ESP8266WiFi.h>
 #include "WDevice.h"
 
-#define HEARTBEAT_INTERVAL 60000
-#define MINIMUM_INTERVAL 20000
-#define QUERY_INTERVAL 2000
-#define CMD_RESP_TIMEOUT 2000
+#define HEARTBEAT_INTERVAL 60000  //set the heartbeat interval
+#define QUERY_INTERVAL 15000      //set the query interval Make sure not to stress the MCU
+#define CMD_RESP_TIMEOUT 1500
+#define MINIMUM_INTERVAL 2000
 
 const unsigned char COMMAND_START[] = {0x55, 0xAA};
 
@@ -206,11 +206,12 @@ public :
         }
         //Query
  //Solve issue #239
-//        if (((now - lastHeartBeat) > MINIMUM_INTERVAL)
-//            && ((lastQueryStatus == 0) || (now - lastQueryStatus > QUERY_INTERVAL))) {
-//          queryDeviceState();
-//          lastQueryStatus = now;
-//        }
+        if (( (now - lastHeartBeat) < HEARTBEAT_INTERVAL)
+            && (QueryMCU)
+            && ((lastQueryStatus == 0) || (now - lastQueryStatus > QUERY_INTERVAL))) {
+          queryDeviceState();
+          lastQueryStatus = now;
+        }
         break;
       }
     }
@@ -254,6 +255,7 @@ protected :
   int8_t gpioStatus; // JY
   int8_t gpioReset; // JY
   bool usingCommandQueue;
+  bool QueryMCU;
 
   void resetAll() {
     receiveIndex = -1;
