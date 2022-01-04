@@ -205,8 +205,7 @@ public :
           lastHeartBeat = now;
         }
         //Query
- //Solve issue #239
-        if (( (now - lastHeartBeat) < HEARTBEAT_INTERVAL)
+         if (( (now - lastHeartBeat) < HEARTBEAT_INTERVAL)
             && (QueryMCU)
             && ((lastQueryStatus == 0) || (now - lastQueryStatus > QUERY_INTERVAL))) {
           queryDeviceState();
