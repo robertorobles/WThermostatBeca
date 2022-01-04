@@ -10,7 +10,6 @@ public :
   WThermostat_BHT_002_GBLW(WNetwork* network, WProperty* thermostatModel, WClock* wClock)
     : WThermostat(network, thermostatModel, wClock) {
     network->debug(F("WThermostat_BHT_002_GBLW created"));
-    QueryMCU = true;  // Enable or Disable querying the MCU Disabling can sove issue #239.
   }
 
   virtual void configureCommandBytes() {

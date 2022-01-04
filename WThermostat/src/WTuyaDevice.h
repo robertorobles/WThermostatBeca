@@ -5,10 +5,12 @@
 #include <ESP8266WiFi.h>
 #include "WDevice.h"
 
-#define HEARTBEAT_INTERVAL 60000  //set the heartbeat interval
-#define QUERY_INTERVAL 15000      //set the query interval Make sure not to stress the MCU
-#define CMD_RESP_TIMEOUT 1500
+//#define HEARTBEAT_INTERVAL 60000  //set the heartbeat interval
+//#define QUERY_INTERVAL 15000      //set the query interval Make sure not to stress the MCU
+#define HEARTBEAT_INTERVAL 10000  //origional value
+#define QUERY_INTERVAL 2000      //origional value
 #define MINIMUM_INTERVAL 2000
+#define CMD_RESP_TIMEOUT 1500
 
 const unsigned char COMMAND_START[] = {0x55, 0xAA};
 
@@ -34,6 +36,8 @@ public :
       lastHeartBeat = lastQueryStatus = 0;
       //notifyAllMcuCommands
   		this->notifyAllMcuCommands = network->getSettings()->setBoolean("notifyAllMcuCommands", false);
+      //QueryMCU
+  		this->QueryMCU = network->getSettings()->setBoolean("QueryMCU", false);
       // JY
       gpioStatus = -1;
       gpioReset = -1;
@@ -205,8 +209,9 @@ public :
           lastHeartBeat = now;
         }
         //Query
-         if (( (now - lastHeartBeat) < HEARTBEAT_INTERVAL)
-            && (QueryMCU)
+         if (( (now - lastHeartBeat) > MINIMUM_INTERVAL)
+         //if (( (now - lastHeartBeat) < HEARTBEAT_INTERVAL) //Only query in between heartbeats
+            && (QueryMCU->getBoolean())
             && ((lastQueryStatus == 0) || (now - lastQueryStatus > QUERY_INTERVAL))) {
           queryDeviceState();
           lastQueryStatus = now;
@@ -237,6 +242,7 @@ public :
 protected :
   unsigned char receivedCommand[1024];
   WProperty* notifyAllMcuCommands;
+  WProperty* QueryMCU;
   bool receivingDataFromMcu;
   int commandLength;
   int receiveIndex;
@@ -254,8 +260,7 @@ protected :
   int8_t gpioStatus; // JY
   int8_t gpioReset; // JY
   bool usingCommandQueue;
-  bool QueryMCU;
-
+  
   void resetAll() {
     receiveIndex = -1;
     commandLength = -1;

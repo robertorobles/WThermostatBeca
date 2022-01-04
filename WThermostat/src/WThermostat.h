@@ -183,6 +183,8 @@ public :
 		page->printf(HTTP_CHECKBOX_OPTION, "am", "am", (this->notifyAllMcuCommands->getBoolean() ? HTTP_CHECKED : ""), "", "Send all MCU commands via MQTT");
     //Checkbox with support for relay
 		page->printf(HTTP_CHECKBOX_OPTION, "rs", "rs", (this->supportingHeatingRelay->getBoolean() ? HTTP_CHECKED : ""), "", "Relay at GPIO 5 (not working without hw mod)");
+    //Checkbox QueryMCU
+		page->printf(HTTP_CHECKBOX_OPTION, "qm", "qm", (this->QueryMCU->getBoolean() ? HTTP_CHECKED : ""), "", "QueryMCU actively");
 
     printConfigPageCustomParameters(request, page);
 
@@ -200,6 +202,7 @@ public :
 		this->completeDeviceState->setBoolean(request->arg("cr") != HTTP_TRUE);
 		this->notifyAllMcuCommands->setBoolean(request->arg("am") == HTTP_TRUE);
     this->supportingHeatingRelay->setBoolean(request->arg("rs") == HTTP_TRUE);
+    this->QueryMCU->setBoolean(request->arg("qm") == HTTP_TRUE);
     submitConfigPageCustomParameters(request, page);
   }
 
