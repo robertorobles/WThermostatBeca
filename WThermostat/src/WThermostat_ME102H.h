@@ -23,6 +23,7 @@ public :
     this->byteTemperatureFloor = 0x65;
     this->byteMaxHeaterTemperature = 0x13;
     this->byteMinHeaterTemperature = 0x1A;
+    this->byteTemperatureCorrection = 0x1B;
     this->temperatureFactor = 1.0f;
     this->byteSchedulesMode = 0x02;
     this->byteHeater = 0x24;

@@ -61,6 +61,7 @@ public :
     this->byteTemperatureFloor = NOT_SUPPORTED;
     this->byteMaxHeaterTemperature = NOT_SUPPORTED;
     this->byteMinHeaterTemperature = NOT_SUPPORTED;
+    this->byteTemperatureCorrection = NOT_SUPPORTED;
     this->temperatureFactor = 2.0f;
     this->byteSchedulesMode = NOT_SUPPORTED;
     this->byteHeater = NOT_SUPPORTED;
@@ -78,6 +79,7 @@ public :
               ((this->byteTemperatureFloor == NOT_SUPPORTED)  || (!this->actualFloorTemperature->isNull())) &&
               ((this->byteMaxHeaterTemperature == NOT_SUPPORTED) || (!this->maxHeaterTemperature->isNull())) &&
               ((this->byteMinHeaterTemperature == NOT_SUPPORTED) || (!this->minHeaterTemperature->isNull())) &&
+              ((this->byteTemperatureCorrection == NOT_SUPPORTED) || (!this->temperatureCorrection->isNull())) &&
               ((this->byteSchedulesMode == NOT_SUPPORTED)     || (!this->schedulesMode->isNull()))
              );
   }
@@ -119,24 +121,35 @@ public :
     this->addProperty(locked);
     if (byteHeater != NOT_SUPPORTED) {
       this->heater = WProperty::createOnOffProperty("Heater", "on");
-      this->heater->setVisibility(MQTT);
+      this->heater->setReadOnly(true);
+      //this->heater->setVisibility(MQTT);
       this->addProperty(heater);
     } else {
       this->heater = nullptr;
     }
     if (byteMinHeaterTemperature != NOT_SUPPORTED) {
       this->minHeaterTemperature = WProperty::createTemperatureProperty("MinHeaterTemperature", "MinHeaterTemperature");
-      this->minHeaterTemperature->setReadOnly(true);
+      this->minHeaterTemperature->setOnChange(std::bind(&WThermostat::minHeaterTemperatureToMcu, this, std::placeholders::_1));
+      this->minHeaterTemperature->setVisibility(MQTT);
       this->addProperty(minHeaterTemperature);
     } else {
       this->minHeaterTemperature = nullptr;
     }
     if (byteMaxHeaterTemperature != NOT_SUPPORTED) {
       this->maxHeaterTemperature = WProperty::createTemperatureProperty("MaxHeaterTemperature", "MaxHeaterTemperature");
-      this->maxHeaterTemperature->setReadOnly(true);
+      this->maxHeaterTemperature->setOnChange(std::bind(&WThermostat::maxHeaterTemperatureToMcu, this, std::placeholders::_1));
+      this->maxHeaterTemperature->setVisibility(MQTT);
       this->addProperty(maxHeaterTemperature);
     } else {
       this->maxHeaterTemperature = nullptr;
+    }
+    if (byteTemperatureCorrection != NOT_SUPPORTED) {
+      this->temperatureCorrection = WProperty::createTemperatureProperty("TemperatureCorrection", "TemperatureCorrection");
+      this->temperatureCorrection->setOnChange(std::bind(&WThermostat::temperatureCorrectionToMcu, this, std::placeholders::_1));
+      this->temperatureCorrection->setVisibility(MQTT);
+      this->addProperty(temperatureCorrection);
+    } else {
+      this->temperatureCorrection = nullptr;
     }
     this->completeDeviceState = network->getSettings()->setBoolean("sendCompleteDeviceState", true);
     //Heating Relay and State property
@@ -362,6 +375,7 @@ protected :
   byte byteTemperatureFloor;
   byte byteMaxHeaterTemperature;
   byte byteMinHeaterTemperature;
+  byte byteTemperatureCorrection;
   byte byteSchedulesMode;
   byte byteHeater;
   byte byteLocked;
@@ -378,7 +392,8 @@ protected :
   WProperty* actualFloorTemperature;
   WProperty* maxHeaterTemperature;
   WProperty* minHeaterTemperature;
-  double targetTemperatureManualMode;
+  WProperty* temperatureCorrection;
+   double targetTemperatureManualMode;
   WProperty* deviceOn;
   WProperty* schedulesMode;
   WProperty *completeDeviceState;
@@ -533,6 +548,15 @@ protected :
         minHeaterTemperature->setDouble(newValue);
         knownCommand = true;
       }
+    } else if ((byteTemperatureCorrection != NOT_SUPPORTED) && (cByte == byteTemperatureCorrection)) {
+      if (commandLength == 0x08) {
+        //Temperature Correction
+        unsigned long rawValue = WSettings::getUnsignedLong(receivedCommand[10], receivedCommand[11], receivedCommand[12], receivedCommand[13]);
+        newValue = (float) rawValue / this->temperatureFactor;
+        changed = ((changed) || (!temperatureCorrection->equalsDouble(newValue)));
+        temperatureCorrection->setDouble(newValue);
+        knownCommand = true;
+      }
     } else if (cByte == byteSchedulesMode) {
       if (commandLength == 0x05) {
         //schedulesMode
@@ -643,6 +667,36 @@ protected :
         unsigned char deviceOnCommand[] = { 0x55, 0xAA, 0x00, 0x06, 0x00, 0x05,
                                             byteDeviceOn, 0x01, 0x00, 0x01, dt};
         commandCharsToSerial(11, deviceOnCommand);
+    }
+  }
+
+  void minHeaterTemperatureToMcu(WProperty* property) {
+    if (!isReceivingDataFromMcu()) {
+      byte ulValues[4];
+      WSettings::getLongBytes((minHeaterTemperature->getDouble() * this->temperatureFactor), ulValues);
+      unsigned char setMinHeaterTemperatureCommand[] = { 0x55, 0xAA, 0x00, 0x06, 0x00, 0x08,
+                                                byteMinHeaterTemperature, 0x02, 0x00, 0x04, ulValues[0], ulValues[1], ulValues[2], ulValues[3]};
+      commandCharsToSerial(14, setMinHeaterTemperatureCommand);
+    }
+ }
+
+  void maxHeaterTemperatureToMcu(WProperty* property) {
+    if (!isReceivingDataFromMcu()) {
+      byte ulValues[4];
+      WSettings::getLongBytes((maxHeaterTemperature->getDouble() * this->temperatureFactor), ulValues);
+      unsigned char setMaxHeaterTemperatureCommand[] = { 0x55, 0xAA, 0x00, 0x06, 0x00, 0x08,
+                                                byteMaxHeaterTemperature, 0x02, 0x00, 0x04, ulValues[0], ulValues[1], ulValues[2], ulValues[3]};
+      commandCharsToSerial(14, setMaxHeaterTemperatureCommand);
+    }
+  }
+
+  void temperatureCorrectionToMcu(WProperty* property) {
+    if (!isReceivingDataFromMcu()) {
+      byte ulValues[4];
+      WSettings::getLongBytes((temperatureCorrection->getDouble() * this->temperatureFactor), ulValues);
+      unsigned char setTemperatureCorrectionCommand[] = { 0x55, 0xAA, 0x00, 0x06, 0x00, 0x08,
+                                                byteTemperatureCorrection, 0x02, 0x00, 0x04, ulValues[0], ulValues[1], ulValues[2], ulValues[3]};
+      commandCharsToSerial(14, setTemperatureCorrectionCommand);
     }
   }
 
