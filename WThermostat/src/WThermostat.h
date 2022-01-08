@@ -70,6 +70,7 @@ public :
     this->byteLocked = NOT_SUPPORTED;
     this->byteSchedules = NOT_SUPPORTED;
     this->byteFreezeMode = NOT_SUPPORTED;
+    this->byteSwitchDiff = NOT_SUPPORTED;
     this->byteSchedulingPosHour = 1;
     this->byteSchedulingPosMinute = 0;
     this->byteSchedulingDays = 18;
@@ -143,7 +144,7 @@ public :
     if (byteMinHeaterTemperature != NOT_SUPPORTED) {
       this->minHeaterTemperature = WProperty::createTemperatureProperty("MinHeaterTemperature", "MinHeaterTemperature");
       this->minHeaterTemperature->setOnChange(std::bind(&WThermostat::minHeaterTemperatureToMcu, this, std::placeholders::_1));
-      this->minHeaterTemperature->setVisibility(MQTT);
+      //this->minHeaterTemperature->setVisibility(MQTT);
       this->addProperty(minHeaterTemperature);
     } else {
       this->minHeaterTemperature = nullptr;
@@ -151,7 +152,7 @@ public :
     if (byteMaxHeaterTemperature != NOT_SUPPORTED) {
       this->maxHeaterTemperature = WProperty::createTemperatureProperty("MaxHeaterTemperature", "MaxHeaterTemperature");
       this->maxHeaterTemperature->setOnChange(std::bind(&WThermostat::maxHeaterTemperatureToMcu, this, std::placeholders::_1));
-      this->maxHeaterTemperature->setVisibility(MQTT);
+      //this->maxHeaterTemperature->setVisibility(MQTT);
       this->addProperty(maxHeaterTemperature);
     } else {
       this->maxHeaterTemperature = nullptr;
@@ -159,10 +160,18 @@ public :
     if (byteTemperatureCorrection != NOT_SUPPORTED) {
       this->temperatureCorrection = WProperty::createTemperatureProperty("TemperatureCorrection", "TemperatureCorrection");
       this->temperatureCorrection->setOnChange(std::bind(&WThermostat::temperatureCorrectionToMcu, this, std::placeholders::_1));
-      this->temperatureCorrection->setVisibility(MQTT);
+      //this->temperatureCorrection->setVisibility(MQTT);
       this->addProperty(temperatureCorrection);
     } else {
       this->temperatureCorrection = nullptr;
+    }
+    if (byteSwitchDiff != NOT_SUPPORTED) {
+      this->switchDiff = WProperty::createTemperatureProperty("SwitchDifference", "SwitchDiff");
+      this->switchDiff->setOnChange(std::bind(&WThermostat::switchDiffToMcu, this, std::placeholders::_1));
+      //this->switchDiff->setVisibility(MQTT);
+      this->addProperty(switchDiff);
+    } else {
+      this->switchDiff = nullptr;
     }
     this->completeDeviceState = network->getSettings()->setBoolean("sendCompleteDeviceState", true);
     //Heating Relay and State property
@@ -389,6 +398,7 @@ protected :
   byte byteMaxHeaterTemperature;
   byte byteMinHeaterTemperature;
   byte byteTemperatureCorrection;
+  byte byteSwitchDiff;
   byte byteSchedulesMode;
   byte byteFreezeMode;
   byte byteHeater;
@@ -407,6 +417,7 @@ protected :
   WProperty* maxHeaterTemperature;
   WProperty* minHeaterTemperature;
   WProperty* temperatureCorrection;
+  WProperty* switchDiff;
    double targetTemperatureManualMode;
   WProperty* deviceOn;
   WProperty* schedulesMode;
@@ -571,6 +582,15 @@ protected :
         temperatureCorrection->setDouble(newValue);
         knownCommand = true;
       }
+    } else if ((byteSwitchDiff != NOT_SUPPORTED) && (cByte == byteSwitchDiff)) {
+      if (commandLength == 0x08) {
+        //Temperature switching
+        unsigned long rawValue = WSettings::getUnsignedLong(receivedCommand[10], receivedCommand[11], receivedCommand[12], receivedCommand[13]);
+        newValue = (float) rawValue / this->temperatureFactor;
+        changed = ((changed) || (!switchDiff->equalsDouble(newValue)));
+        switchDiff->setDouble(newValue);
+        knownCommand = true;
+      }
     } else if (cByte == byteSchedulesMode) {
       if (commandLength == 0x05) {
         //schedulesMode
@@ -721,6 +741,16 @@ protected :
       unsigned char setTemperatureCorrectionCommand[] = { 0x55, 0xAA, 0x00, 0x06, 0x00, 0x08,
                                                 byteTemperatureCorrection, 0x02, 0x00, 0x04, ulValues[0], ulValues[1], ulValues[2], ulValues[3]};
       commandCharsToSerial(14, setTemperatureCorrectionCommand);
+    }
+  }
+
+  void switchDiffToMcu(WProperty* property) {
+    if (!isReceivingDataFromMcu()) {
+      byte ulValues[4];
+      WSettings::getLongBytes((switchDiff->getDouble() * this->temperatureFactor), ulValues);
+      unsigned char setSwitchDiffCommand[] = { 0x55, 0xAA, 0x00, 0x06, 0x00, 0x08,
+                                                byteSwitchDiff, 0x02, 0x00, 0x04, ulValues[0], ulValues[1], ulValues[2], ulValues[3]};
+      commandCharsToSerial(14, setSwitchDiffCommand);
     }
   }
 

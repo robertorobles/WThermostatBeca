@@ -28,6 +28,7 @@ public :
     this->byteTemperatureCorrection = 0x1B;
     this->byteTemperatureFloor = 0x65;
     this->byteFreezeMode = 0x67;
+    this->byteSwitchDiff = 0x6A;
     this->byteSchedules = 0x6c;
     this->temperatureFactor = 1.0f;
     this->byteSchedulingPosHour = 0;
