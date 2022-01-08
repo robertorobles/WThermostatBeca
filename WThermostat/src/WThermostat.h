@@ -24,6 +24,8 @@ const char* SCHEDULES_MODE_OFF = "off";
 const char* SCHEDULES_MODE_AUTO = "auto";
 const char* SCHEDULES_MODE_HOLD = "hold";
 const char* STATE_OFF = SCHEDULES_MODE_OFF;
+const char* FREEZE_MODE_ON = "on";
+const char* FREEZE_MODE_OFF = "off";
 const char* STATE_HEATING = "heating";
 const char SCHEDULES_PERIODS[] = "123456";
 const char SCHEDULES_DAYS[] = "wau";
@@ -67,6 +69,7 @@ public :
     this->byteHeater = NOT_SUPPORTED;
     this->byteLocked = NOT_SUPPORTED;
     this->byteSchedules = NOT_SUPPORTED;
+    this->byteFreezeMode = NOT_SUPPORTED;
     this->byteSchedulingPosHour = 1;
     this->byteSchedulingPosMinute = 0;
     this->byteSchedulingDays = 18;
@@ -80,7 +83,8 @@ public :
               ((this->byteMaxHeaterTemperature == NOT_SUPPORTED) || (!this->maxHeaterTemperature->isNull())) &&
               ((this->byteMinHeaterTemperature == NOT_SUPPORTED) || (!this->minHeaterTemperature->isNull())) &&
               ((this->byteTemperatureCorrection == NOT_SUPPORTED) || (!this->temperatureCorrection->isNull())) &&
-              ((this->byteSchedulesMode == NOT_SUPPORTED)     || (!this->schedulesMode->isNull()))
+              ((this->byteSchedulesMode == NOT_SUPPORTED)     || (!this->schedulesMode->isNull())) &&
+              ((this->byteFreezeMode == NOT_SUPPORTED)     || (!this->freezeMode->isNull()))
              );
   }
 
@@ -114,6 +118,15 @@ public :
     this->schedulesMode->addEnumString(SCHEDULES_MODE_OFF);
     this->schedulesMode->setOnChange(std::bind(&WThermostat::schedulesModeToMcu, this, std::placeholders::_1));
     this->addProperty(schedulesMode);
+    if (byteHeater != NOT_SUPPORTED) {
+      this->freezeMode = new WProperty("freezeMode", "FreezeMode", STRING, TYPE_THERMOSTAT_MODE_PROPERTY);
+      this->freezeMode->addEnumString(FREEZE_MODE_OFF);
+      this->freezeMode->addEnumString(FREEZE_MODE_ON);
+      this->freezeMode->setOnChange(std::bind(&WThermostat::freezeModeToMcu, this, std::placeholders::_1));
+      this->addProperty(freezeMode);
+    } else {
+      this->freezeMode = nullptr;
+    }
     this->switchBackToAuto = network->getSettings()->setBoolean("switchBackToAuto", true);
     this->locked = WProperty::createOnOffProperty("locked", "Lock");
     this->locked->setOnChange(std::bind(&WThermostat::lockedToMcu, this, std::placeholders::_1));
@@ -377,6 +390,7 @@ protected :
   byte byteMinHeaterTemperature;
   byte byteTemperatureCorrection;
   byte byteSchedulesMode;
+  byte byteFreezeMode;
   byte byteHeater;
   byte byteLocked;
   byte byteSchedules;
@@ -396,6 +410,7 @@ protected :
    double targetTemperatureManualMode;
   WProperty* deviceOn;
   WProperty* schedulesMode;
+  WProperty* freezeMode;
   WProperty *completeDeviceState;
   WProperty* switchBackToAuto;
   WProperty* heater;
@@ -500,7 +515,6 @@ protected :
       if (commandLength == 0x08) {
         //target Temperature for manual mode
         //e.g. 24.5C: 55 aa 01 07 00 08 02 02 00 04 00 00 00 31
-
         unsigned long rawValue = WSettings::getUnsignedLong(receivedCommand[10], receivedCommand[11], receivedCommand[12], receivedCommand[13]);
         newValue = (float) rawValue / this->temperatureFactor;
         changed = ((changed) || (!WProperty::isEqual(targetTemperatureManualMode, newValue, 0.01)));
@@ -563,6 +577,16 @@ protected :
         newS = schedulesMode->getEnumString(receivedCommand[10]);
         if (newS != nullptr) {
           changed = ((changed) || (schedulesMode->setString(newS)));
+          if (changed) updateTargetTemperature();
+          knownCommand = true;
+        }
+      }
+    } else if (cByte == byteFreezeMode) {
+      if (commandLength == 0x05) {
+        //freezeMode
+        newS = freezeMode->getEnumString(receivedCommand[10]);
+        if (newS != nullptr) {
+          changed = ((changed) || (freezeMode->setString(newS)));
           if (changed) updateTargetTemperature();
           knownCommand = true;
         }
@@ -719,6 +743,17 @@ protected :
       if (sm != 0xFF) {
         unsigned char deviceOnCommand[] = { 0x55, 0xAA, 0x00, 0x06, 0x00, 0x05,
                                             byteSchedulesMode, 0x04, 0x00, 0x01, sm};
+        commandCharsToSerial(11, deviceOnCommand);
+      }
+    }
+  }
+
+  void freezeModeToMcu(WProperty* property) {
+    if ((!isReceivingDataFromMcu()) && (freezeMode != nullptr)) {
+      byte fm = freezeMode->getEnumIndex();
+      if (fm != 0xFF) {
+        unsigned char deviceOnCommand[] = { 0x55, 0xAA, 0x00, 0x06, 0x00, 0x05,
+                                            byteFreezeMode, 0x01, 0x00, 0x01, fm};
         commandCharsToSerial(11, deviceOnCommand);
       }
     }

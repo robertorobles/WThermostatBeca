@@ -18,17 +18,18 @@ public :
 
   virtual void configureCommandBytes() {
     this->byteDeviceOn = 0x01;
-    this->byteTemperatureActual = 0x18;
-    this->byteTemperatureTarget = 0x10;
-    this->byteTemperatureFloor = 0x65;
-    this->byteMaxHeaterTemperature = 0x13;
-    this->byteMinHeaterTemperature = 0x1A;
-    this->byteTemperatureCorrection = 0x1B;
-    this->temperatureFactor = 1.0f;
     this->byteSchedulesMode = 0x02;
+    this->byteTemperatureTarget = 0x10;
+    this->byteMaxHeaterTemperature = 0x13;
+    this->byteTemperatureActual = 0x18;
     this->byteHeater = 0x24;
     this->byteLocked = 0x28;
+    this->byteMinHeaterTemperature = 0x1A;
+    this->byteTemperatureCorrection = 0x1B;
+    this->byteTemperatureFloor = 0x65;
+    this->byteFreezeMode = 0x67;
     this->byteSchedules = 0x6c;
+    this->temperatureFactor = 1.0f;
     this->byteSchedulingPosHour = 0;
     this->byteSchedulingPosMinute = 1;
     this->byteSchedulingDays = 8;
