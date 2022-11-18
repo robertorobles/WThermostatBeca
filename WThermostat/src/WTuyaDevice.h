@@ -8,7 +8,8 @@
 //#define HEARTBEAT_INTERVAL 60000  //set the heartbeat interval
 //#define QUERY_INTERVAL 15000      //set the query interval Make sure not to stress the MCU
 #define HEARTBEAT_INTERVAL 10000  //origional value
-#define QUERY_INTERVAL 2000      //origional value
+//#define QUERY_INTERVAL 2000      //origional value
+#define QUERY_INTERVAL 5000        //new default value needs multipler
 #define MINIMUM_INTERVAL 2000
 #define CMD_RESP_TIMEOUT 1500
 

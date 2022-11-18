@@ -9,6 +9,24 @@ const char* SENSOR_SELECTION_INTERNAL = "internal";
 const char* SENSOR_SELECTION_FLOOR = "floor";
 const char* SENSOR_SELECTION_BOTH = "both";
 
+// Celcius/Farenheit            = Tuya DPID DEC  23 HEX 17 55AA0307000517040001002A
+// Device on/off                = Tuya DPID DEC   1 HEX 01 55AA03070005010100010112
+// Actual Temperature           = Tuya DPID DEC  24 HEX 18 55AA03070008180200040000001645
+// Temperature Floor sensor     = Tuya DPID DEC 101 HEX 65 55AA0307000865020004000000007C
+// Target Temperature           = Tuya DPID DEC  16 HEX 10 55AA03070008100200040000001940
+// Shedual Mode Auto/Off        = Tuya DPID DEC   2 HEX 02 55AA03070005020400010116
+// Max Heater Temperature       = Tuya DPID DEC  19 HEX 13 55AA03070008130200040000005A84
+// Min Heater Temperature       = Tuya DPID DEC  26 HEX 1A 55AA030700081A0200040000001445
+// Switch Difference in degrees = Tuya DPID DEC 106 HEX 6A 55AA030700086A0200040000000384
+// Temperature correction       = Tuya DPID DEC  27 HEX 1B 55AA030700081B0200040000000032
+// Sensor Selection             = Tuya DPID DEC  43 HEX 2B 55AA030700052B040001003E
+// ?                            = Tuya DPID DEC 104 HEX 68 55AA0307000568040001017C
+// ?                            = Tuya DPID DEC  45 HEX 2D 55AA030700052D0500010041
+// Freeze Mode on/off           = Tuya DPID DEC 103 HEX 67 55AA03070005670100010077
+// Schedules                    = Tuya DPID DEC 108 HEX 6C 55AA0307001C6C00001806001408000F0B1E0F0C1E0F11001616000F08001617000FDB
+// Locked on/off                = Tuya DPID DEC  40 HEX 28 55AA03070005280100010038
+// Heater on/off                = Tuya DPID DEC  36 HEX 24 55AA03070005240400010037
+
 class WThermostat_ME102H : public WThermostat {
 public :
   WThermostat_ME102H(WNetwork* network, WProperty* thermostatModel, WClock* wClock)
