@@ -34,7 +34,7 @@ public :
     : WDevice(network, id, name, type) {
       resetAll();
       this->receivingDataFromMcu = false;
-      lastHeartBeat = lastQueryStatus = 0;
+      lastHeartBeat = lastQueryStatus = queryStatusIndex = 0;
       //notifyAllMcuCommands
   		this->notifyAllMcuCommands = network->getSettings()->setBoolean("notifyAllMcuCommands", false);
       //QueryMCU
@@ -212,9 +212,10 @@ public :
         //Query
          if (( (now - lastHeartBeat) < HEARTBEAT_INTERVAL)                              //Only query in between heartbeats
             && (QueryMCU->getBoolean())                                                 //Only query when QueryMCU is enabled
-            && ((lastQueryStatus == 0) || (now - lastQueryStatus > QUERY_INTERVAL))) {  //Query at first boot and every QUERY_INTERVAL afterwards if both 2 test are true
+            && ((lastQueryStatus == 0) || (now - lastQueryStatus > QUERY_INTERVAL) && queryStatusIndex < 2)) {  //Query at first boot and every QUERY_INTERVAL afterwards if both 2 test are true
           queryDeviceState();
           lastQueryStatus = now;
+          queryStatusIndex++;
         }
         break;
       }
@@ -251,6 +252,7 @@ protected :
   bool mcuRestarted;
   unsigned long lastHeartBeat;
   unsigned long lastQueryStatus;
+  int queryStatusIndex;
   int iResetState;        // JY
   unsigned long lastCommandSent;   // JY
   WTuyaDeviceState processingState; // JY
