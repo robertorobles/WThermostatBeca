@@ -9,7 +9,7 @@
 //#define QUERY_INTERVAL 15000      //set the query interval Make sure not to stress the MCU
 #define HEARTBEAT_INTERVAL 10000  //origional value
 //#define QUERY_INTERVAL 2000      //origional value
-#define QUERY_INTERVAL 5000        //new default value needs multipler
+#define QUERY_INTERVAL 10000        //new default value needs multipler
 #define MINIMUM_INTERVAL 2000
 #define CMD_RESP_TIMEOUT 1500
 
@@ -34,7 +34,7 @@ public :
     : WDevice(network, id, name, type) {
       resetAll();
       this->receivingDataFromMcu = false;
-      lastHeartBeat = lastQueryStatus = queryStatusIndex = 0;
+      lastHeartBeat = lastQueryStatus = 0;
       //notifyAllMcuCommands
   		this->notifyAllMcuCommands = network->getSettings()->setBoolean("notifyAllMcuCommands", false);
       //QueryMCU
@@ -201,6 +201,13 @@ public :
         break;
       }
       case STATE_IDLE: {
+        //Query
+         if ((now - lastQueryStatus > QUERY_INTERVAL)                              //It waits until QUERY_INTERVAL value
+            && (QueryMCU->getBoolean())                                                 //Only query when QueryMCU is enabled
+            && ((lastQueryStatus == 0))) {  //Query at first boot
+          queryDeviceState();
+          lastQueryStatus = now;
+        }
         //Heartbeat
         if ((HEARTBEAT_INTERVAL > 0) &&
             ((lastHeartBeat == 0) || (now - lastHeartBeat > HEARTBEAT_INTERVAL))) {
@@ -208,14 +215,6 @@ public :
           commandCharsToSerial(6, heartBeatCommand);
           //commandHexStrToSerial("55 aa 00 00 00 00");
           lastHeartBeat = now;
-        }
-        //Query
-         if (( (now - lastHeartBeat) < HEARTBEAT_INTERVAL)                              //Only query in between heartbeats
-            && (QueryMCU->getBoolean())                                                 //Only query when QueryMCU is enabled
-            && ((lastQueryStatus == 0) || (now - lastQueryStatus > QUERY_INTERVAL) && queryStatusIndex < 2)) {  //Query at first boot and every QUERY_INTERVAL afterwards if both 2 test are true
-          queryDeviceState();
-          lastQueryStatus = now;
-          queryStatusIndex++;
         }
         break;
       }
@@ -252,7 +251,6 @@ protected :
   bool mcuRestarted;
   unsigned long lastHeartBeat;
   unsigned long lastQueryStatus;
-  int queryStatusIndex;
   int iResetState;        // JY
   unsigned long lastCommandSent;   // JY
   WTuyaDeviceState processingState; // JY
